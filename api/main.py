@@ -10,9 +10,20 @@ from api.routes.network import router as network_router
 from api.routes.processes import router as processes_router
 from scanner.logger import configure_logging
 
+from fastapi.middleware.cors import CORSMiddleware
+
+
+
+
 configure_logging()
 
 app = FastAPI(title="OS Performance Metrics Scanner", version="1.0.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or your specific preview URL
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(metrics_router)
 app.include_router(cpu_router)
