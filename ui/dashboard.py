@@ -20,6 +20,15 @@ settings = get_settings()
 
 
 st.set_page_config(page_title="OS Performance Metrics", layout="wide")
+
+# Prevent the UI from dimming during auto-refresh reruns.
+# Streamlit reduces the opacity of stale elements to 0.33 while a rerun is
+# in progress, which causes a visible darkening effect every refresh cycle.
+st.markdown(
+    "<style>[data-stale='true'] { opacity: 1 !important; }</style>",
+    unsafe_allow_html=True,
+)
+
 st.title("🖥️ OS Performance Metrics Scanner")
 
 refresh_interval_ms = settings.refresh_interval_seconds * 1000
