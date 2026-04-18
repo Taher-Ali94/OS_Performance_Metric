@@ -29,7 +29,6 @@ api_base_url = st.sidebar.text_input("API Base URL", value=settings.api_base_url
 st.sidebar.caption(f"Refresh interval: {settings.refresh_interval_seconds}s")
 
 
-@st.cache_data(ttl=1, show_spinner=False)
 def fetch_metrics(url: str) -> Dict[str, Any]:
     response = requests.get(f"{url}/metrics", timeout=5)
     response.raise_for_status()
@@ -38,6 +37,10 @@ def fetch_metrics(url: str) -> Dict[str, Any]:
 
 try:
     metrics = fetch_metrics(api_base_url)
+except requests.Timeout:
+    logger.exception("Timed out while loading metrics from API")
+    st.error("Connection to API timed out. Check API availability and network latency.")
+    st.stop()
 except Exception as exc:
     logger.exception("Failed to load metrics from API")
     st.error(f"Unable to load metrics from API: {exc}")

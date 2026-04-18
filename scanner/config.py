@@ -16,7 +16,7 @@ class Settings:
     refresh_interval_seconds: int = 5
     top_process_count: int = 10
     network_sample_seconds: float = 1.0
-    api_host: str = "0.0.0.0"
+    api_host: str = "127.0.0.1"
     api_port: int = 8000
     api_base_url: str = "http://127.0.0.1:8000"
 
@@ -53,7 +53,7 @@ def get_settings() -> Settings:
                 file_config.get("network_sample_seconds", 1.0),
             )
         ),
-        api_host=os.getenv("API_HOST", file_config.get("api_host", "0.0.0.0")),
+        api_host=os.getenv("API_HOST", file_config.get("api_host", "127.0.0.1")),
         api_port=int(os.getenv("API_PORT", file_config.get("api_port", 8000))),
         api_base_url=os.getenv(
             "API_BASE_URL", file_config.get("api_base_url", "http://127.0.0.1:8000")

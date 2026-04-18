@@ -51,7 +51,7 @@ pip install -r requirements.txt
 ### 2) Start FastAPI server
 
 ```bash
-uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 ### 3) Start Streamlit dashboard
@@ -77,4 +77,4 @@ You can override values using environment variables:
 
 ## Cross-platform Notes
 
-The scanner uses `psutil`, `platform`, and `socket`, so it supports Linux, macOS, and Windows (subject to OS-level permission differences on process/partition visibility).
+The scanner uses `psutil`, `platform`, and `socket`, so it supports Linux, macOS, and Windows (subject to OS-level permission differences on process/partition visibility).\n\nBy default, API binding is `127.0.0.1` for safer local usage. Set `API_HOST=0.0.0.0` only when you intentionally need remote access.
