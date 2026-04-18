@@ -1,0 +1,27 @@
+"""Network route module."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException
+
+from api.dependencies import get_scanner_service
+from api.models.metrics import NetworkResponse
+from scanner.service import SystemScannerService
+
+logger = logging.getLogger(__name__)
+router = APIRouter(tags=["metrics"])
+
+
+@router.get("/network", response_model=NetworkResponse)
+async def network_metrics(
+    service: SystemScannerService = Depends(get_scanner_service),
+) -> NetworkResponse:
+    try:
+        data = await asyncio.to_thread(service.network)
+        return NetworkResponse(**data)
+    except Exception as exc:
+        logger.exception("Failed to collect network metrics")
+        raise HTTPException(status_code=500, detail="Failed to collect network metrics") from exc
