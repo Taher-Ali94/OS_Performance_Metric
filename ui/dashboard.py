@@ -16,10 +16,11 @@ from streamlit_autorefresh import st_autorefresh
 
 def _ensure_project_root_on_path() -> None:
     script_path = Path(__file__).resolve()
-    project_root = next(
-        (directory for directory in script_path.parents if (directory / "scanner").is_dir()),
-        script_path.parents[1],
-    )
+    project_root = script_path.parent
+    for directory in script_path.parents:
+        if (directory / "scanner").is_dir():
+            project_root = directory
+            break
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
