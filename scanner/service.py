@@ -17,6 +17,9 @@ from scanner.metrics_collector import (
     get_top_processes,
 )
 
+SECONDS_PER_DAY = 86_400
+SECONDS_PER_HOUR = 3_600
+
 
 class SystemScannerService:
     """High-level service that provides modular and full metric snapshots."""
@@ -41,11 +44,11 @@ class SystemScannerService:
 
     def metrics(self) -> Dict[str, Any]:
         memory = self.memory()
-        disk = self.disk()
+        disk = self.disk().copy()
         uptime_raw = get_system_uptime()
         uptime_seconds = int(uptime_raw.get("uptime_seconds", 0))
-        days, remaining_after_days = divmod(uptime_seconds, 86_400)
-        hours, remaining_after_hours = divmod(remaining_after_days, 3_600)
+        days, remaining_after_days = divmod(uptime_seconds, SECONDS_PER_DAY)
+        hours, remaining_after_hours = divmod(remaining_after_days, SECONDS_PER_HOUR)
         minutes, seconds = divmod(remaining_after_hours, 60)
 
         os_info = get_os_info()
