@@ -3,13 +3,35 @@
 from __future__ import annotations
 
 import logging
+import sys
 from collections import deque
+from pathlib import Path
 from typing import Any, Deque, Dict
 
 import pandas as pd
 import requests
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
+
+
+def _add_project_root_to_path() -> None:
+    script_path = Path(__file__).resolve()
+    project_root: Path | None = None
+    for directory in script_path.parents:
+        if (directory / "scanner").is_dir():
+            project_root = directory
+            break
+    if project_root is None:
+        raise RuntimeError(
+            f"Could not locate project root containing 'scanner' directory from {script_path}."
+        )
+    resolved_project_root = project_root.resolve()
+    resolved_sys_paths = {str(Path(path).resolve()) for path in sys.path if path}
+    if str(resolved_project_root) not in resolved_sys_paths:
+        sys.path.insert(0, str(resolved_project_root))
+
+
+_add_project_root_to_path()
 
 from scanner.config import get_settings
 from scanner.logger import configure_logging
