@@ -22,9 +22,13 @@ def _add_project_root_to_path() -> None:
             project_root = directory
             break
     if project_root is None:
-        raise RuntimeError("Could not locate project root containing 'scanner' directory.")
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
+        raise RuntimeError(
+            f"Could not locate project root containing 'scanner' directory from {script_path}."
+        )
+    resolved_project_root = project_root.resolve()
+    resolved_sys_paths = {str(Path(path).resolve()) for path in sys.path if path}
+    if str(resolved_project_root) not in resolved_sys_paths:
+        sys.path.insert(0, str(resolved_project_root))
 
 
 _add_project_root_to_path()
