@@ -14,7 +14,7 @@ import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
 
-def _ensure_project_root_on_path() -> None:
+def _add_project_root_to_path() -> None:
     script_path = Path(__file__).resolve()
     project_root: Path | None = None
     for directory in script_path.parents:
@@ -27,7 +27,7 @@ def _ensure_project_root_on_path() -> None:
         sys.path.insert(0, str(project_root))
 
 
-_ensure_project_root_on_path()
+_add_project_root_to_path()
 
 from scanner.config import get_settings
 from scanner.logger import configure_logging
