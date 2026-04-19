@@ -16,7 +16,7 @@ from streamlit_autorefresh import st_autorefresh
 
 def _ensure_project_root_on_path() -> None:
     script_path = Path(__file__).resolve()
-    project_root = script_path.parent
+    project_root = script_path.parent.parent if len(script_path.parents) > 1 else script_path.parent
     for directory in script_path.parents:
         if (directory / "scanner").is_dir():
             project_root = directory
