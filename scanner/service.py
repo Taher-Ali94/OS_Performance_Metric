@@ -17,6 +17,9 @@ from scanner.metrics_collector import (
     get_top_processes,
 )
 
+_SECONDS_PER_DAY = 86_400
+_SECONDS_PER_HOUR = 3_600
+
 
 class SystemScannerService:
     """High-level service that provides modular and full metric snapshots."""
@@ -40,14 +43,44 @@ class SystemScannerService:
         return {"top_processes": get_top_processes(limit=self.settings.top_process_count)}
 
     def metrics(self) -> Dict[str, Any]:
+        memory = self.memory()
+        disk = self.disk().copy()
+        uptime_raw = get_system_uptime()
+        uptime_seconds = int(uptime_raw.get("uptime_seconds", 0))
+        days, remaining_after_days = divmod(uptime_seconds, _SECONDS_PER_DAY)
+        hours, remaining_after_hours = divmod(remaining_after_days, _SECONDS_PER_HOUR)
+        minutes, seconds = divmod(remaining_after_hours, 60)
+
+        os_info = get_os_info().copy()
+        hardware_info = get_hardware_info().copy()
+        disk_io = disk.get("io", {}).copy()
+        disk_io.setdefault("read_time", 0)
+        disk_io.setdefault("write_time", 0)
+        disk["io"] = disk_io
+
+        os_info.setdefault("node", os_info.get("hostname", "unknown"))
+        os_info.setdefault("machine", os_info.get("architecture", "unknown"))
+        os_info.setdefault("processor", hardware_info.get("cpu_model", "unknown"))
+
+        hardware_info.setdefault("total_memory", memory.get("total", 0))
+
+        uptime = {
+            **uptime_raw,
+            "days": days,
+            "hours": hours,
+            "minutes": minutes,
+            "seconds": seconds,
+            "total_seconds": uptime_seconds,
+        }
+
         return {
             "cpu": self.cpu(),
-            "memory": self.memory(),
-            "disk": self.disk(),
+            "memory": memory,
+            "disk": disk,
             "network": self.network(),
-            "uptime": get_system_uptime(),
+            "uptime": uptime,
             "processes": self.processes()["top_processes"],
             "gpu": get_gpu_metrics(),
-            "os": get_os_info(),
-            "hardware": get_hardware_info(),
+            "os": os_info,
+            "hardware": hardware_info,
         }

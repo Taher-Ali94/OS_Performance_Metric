@@ -40,6 +40,20 @@ A Python-based OS performance monitoring solution with:
 - `GET /network`
 - `GET /processes`
 
+### system-pulse compatibility
+
+The `/metrics` response includes compatibility fields used by
+[`system-pulse`](https://github.com/Taher-Ali94/system-pulse), while preserving
+the existing response used by this repository's Streamlit UI.
+
+For `system-pulse` to use live data instead of mock data, make sure:
+
+1. This API is running and reachable from the browser running `system-pulse`.
+2. `system-pulse` API base points to this backend (default expected route:
+   `<API_BASE>/metrics`).
+3. If frontend and backend run on different origins, backend CORS remains
+   enabled (already configured in `api/main.py`).
+
 ## Run Instructions
 
 ### 1) Install dependencies
