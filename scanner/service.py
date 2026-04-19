@@ -44,13 +44,13 @@ class SystemScannerService:
         disk = self.disk()
         uptime_raw = get_system_uptime()
         uptime_seconds = int(uptime_raw.get("uptime_seconds", 0))
-        days, rem = divmod(uptime_seconds, 86_400)
-        hours, rem = divmod(rem, 3_600)
-        minutes, seconds = divmod(rem, 60)
+        days, remaining_after_days = divmod(uptime_seconds, 86_400)
+        hours, remaining_after_hours = divmod(remaining_after_days, 3_600)
+        minutes, seconds = divmod(remaining_after_hours, 60)
 
         os_info = get_os_info()
         hardware_info = get_hardware_info()
-        disk_io = dict(disk.get("io", {}))
+        disk_io = disk.get("io", {}).copy()
         disk_io.setdefault("read_time", 0)
         disk_io.setdefault("write_time", 0)
         disk["io"] = disk_io
