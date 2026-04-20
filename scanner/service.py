@@ -21,7 +21,7 @@ from scanner.metrics_collector import (
 
 _SECONDS_PER_DAY = 86_400
 _SECONDS_PER_HOUR = 3_600
-_COLLECTOR_TIMEOUT_SECONDS = 3.0
+_COLLECTOR_TIMEOUT_SECONDS = 10.0
 
 logger = logging.getLogger(__name__)
 
