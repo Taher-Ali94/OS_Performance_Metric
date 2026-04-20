@@ -19,6 +19,7 @@ class Settings:
     api_host: str = "127.0.0.1"
     api_port: int = 8000
     api_base_url: str = "http://127.0.0.1:8000"
+    request_timeout_seconds: int = 15
 
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.json"
@@ -57,5 +58,11 @@ def get_settings() -> Settings:
         api_port=int(os.getenv("API_PORT", file_config.get("api_port", 8000))),
         api_base_url=os.getenv(
             "API_BASE_URL", file_config.get("api_base_url", "http://127.0.0.1:8000")
+        ),
+        request_timeout_seconds=int(
+            os.getenv(
+                "REQUEST_TIMEOUT_SECONDS",
+                file_config.get("request_timeout_seconds", 15),
+            )
         ),
     )

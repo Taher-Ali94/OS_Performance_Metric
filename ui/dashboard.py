@@ -39,7 +39,7 @@ st.sidebar.caption(f"Refresh interval: {settings.refresh_interval_seconds}s")
 
 
 def fetch_metrics(url: str) -> Dict[str, Any]:
-    response = requests.get(f"{url}/metrics", timeout=5)
+    response = requests.get(f"{url}/metrics", timeout=settings.request_timeout_seconds)
     response.raise_for_status()
     return response.json()
 
