@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
 from scanner.config import Settings
 from scanner.metrics_collector import (
@@ -49,7 +49,7 @@ class SystemScannerService:
 
     @staticmethod
     def _run_with_timeout(
-        fn: Any,
+        fn: Callable[[], Dict[str, Any] | list[Dict[str, Any]]],
         fallback: Dict[str, Any] | list[Dict[str, Any]],
         component: str,
         timeout_seconds: float = _COLLECTOR_TIMEOUT_SECONDS,
@@ -117,7 +117,7 @@ class SystemScannerService:
             "network",
         )
         processes = self._run_with_timeout(
-            lambda: self.processes()["top_processes"],
+            lambda: get_top_processes(limit=self.settings.top_process_count),
             [],
             "processes",
         )
@@ -131,8 +131,8 @@ class SystemScannerService:
         hours, remaining_after_hours = divmod(remaining_after_days, _SECONDS_PER_HOUR)
         minutes, seconds = divmod(remaining_after_hours, 60)
 
-        os_info = self._run_with_timeout(get_os_info, {}, "os").copy()
-        hardware_info = self._run_with_timeout(get_hardware_info, {}, "hardware").copy()
+        os_info = self._run_with_timeout(get_os_info, {}, "os")
+        hardware_info = self._run_with_timeout(get_hardware_info, {}, "hardware")
         disk_io = disk.get("io", {}).copy()
         disk_io.setdefault("read_time", 0)
         disk_io.setdefault("write_time", 0)
