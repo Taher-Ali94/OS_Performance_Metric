@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List, Union
 
 from scanner.config import Settings
 from scanner.metrics_collector import (
@@ -31,6 +31,7 @@ class SystemScannerService:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self._executor = ThreadPoolExecutor(max_workers=8)
 
     def cpu(self) -> Dict[str, Any]:
         return get_cpu_metrics()
@@ -47,25 +48,25 @@ class SystemScannerService:
     def processes(self) -> Dict[str, Any]:
         return {"top_processes": get_top_processes(limit=self.settings.top_process_count)}
 
-    @staticmethod
     def _run_with_timeout(
-        fn: Callable[[], Dict[str, Any] | list[Dict[str, Any]]],
-        fallback: Dict[str, Any] | list[Dict[str, Any]],
+        self,
+        fn: Callable[[], Union[Dict[str, Any], List[Dict[str, Any]]]],
+        fallback: Union[Dict[str, Any], List[Dict[str, Any]]],
         component: str,
         timeout_seconds: float = _COLLECTOR_TIMEOUT_SECONDS,
-    ) -> Dict[str, Any] | list[Dict[str, Any]]:
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(fn)
-            try:
-                return future.result(timeout=timeout_seconds)
-            except FutureTimeoutError:
-                logger.warning(
-                    "Timed out collecting %s metrics after %.1fs",
-                    component,
-                    timeout_seconds,
-                )
-            except Exception:
-                logger.exception("Failed collecting %s metrics", component)
+    ) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+        future = self._executor.submit(fn)
+        try:
+            return future.result(timeout=timeout_seconds)
+        except FutureTimeoutError:
+            future.cancel()
+            logger.warning(
+                "Timed out collecting %s metrics after %.1fs",
+                component,
+                timeout_seconds,
+            )
+        except Exception:
+            logger.exception("Failed collecting %s metrics", component)
         return fallback
 
     def metrics(self) -> Dict[str, Any]:
