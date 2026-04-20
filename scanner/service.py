@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+import logging
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+from typing import Any, Callable, Dict, List, Union
 
 from scanner.config import Settings
 from scanner.metrics_collector import (
@@ -19,6 +21,9 @@ from scanner.metrics_collector import (
 
 _SECONDS_PER_DAY = 86_400
 _SECONDS_PER_HOUR = 3_600
+_COLLECTOR_TIMEOUT_SECONDS = 3.0
+
+logger = logging.getLogger(__name__)
 
 
 class SystemScannerService:
@@ -26,6 +31,7 @@ class SystemScannerService:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self._executor = ThreadPoolExecutor(max_workers=8)
 
     def cpu(self) -> Dict[str, Any]:
         return get_cpu_metrics()
@@ -42,17 +48,93 @@ class SystemScannerService:
     def processes(self) -> Dict[str, Any]:
         return {"top_processes": get_top_processes(limit=self.settings.top_process_count)}
 
+    def _run_with_timeout(
+        self,
+        fn: Callable[[], Union[Dict[str, Any], List[Dict[str, Any]]]],
+        fallback: Union[Dict[str, Any], List[Dict[str, Any]]],
+        component: str,
+        timeout_seconds: float = _COLLECTOR_TIMEOUT_SECONDS,
+    ) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+        future = self._executor.submit(fn)
+        try:
+            return future.result(timeout=timeout_seconds)
+        except FutureTimeoutError:
+            future.cancel()
+            logger.warning(
+                "Timed out collecting %s metrics after %.1fs",
+                component,
+                timeout_seconds,
+            )
+        except Exception:
+            logger.exception("Failed collecting %s metrics", component)
+        return fallback
+
     def metrics(self) -> Dict[str, Any]:
-        memory = self.memory()
-        disk = self.disk().copy()
-        uptime_raw = get_system_uptime()
+        cpu = self._run_with_timeout(
+            self.cpu,
+            {
+                "overall_percent": 0.0,
+                "per_core_percent": [],
+                "physical_cores": None,
+                "logical_cores": None,
+                "load_avg": None,
+            },
+            "cpu",
+        )
+        memory = self._run_with_timeout(
+            self.memory,
+            {
+                "total": 0,
+                "used": 0,
+                "free": 0,
+                "percent": 0.0,
+                "swap_total": 0,
+                "swap_used": 0,
+                "swap_percent": 0.0,
+            },
+            "memory",
+        )
+        disk = self._run_with_timeout(
+            self.disk,
+            {
+                "overall": {"total": 0, "used": 0, "free": 0, "percent": 0.0},
+                "partitions": [],
+                "io": {"read_bytes": 0, "write_bytes": 0, "read_count": 0, "write_count": 0},
+            },
+            "disk",
+        )
+        network = self._run_with_timeout(
+            self.network,
+            {
+                "bytes_sent": 0,
+                "bytes_recv": 0,
+                "packets_sent": 0,
+                "packets_recv": 0,
+                "errors_in": 0,
+                "errors_out": 0,
+                "bytes_sent_per_sec": 0.0,
+                "bytes_recv_per_sec": 0.0,
+            },
+            "network",
+        )
+        processes_data = self._run_with_timeout(
+            self.processes,
+            {"top_processes": []},
+            "processes",
+        )
+        top_processes_list = processes_data.get("top_processes", [])
+        uptime_raw = self._run_with_timeout(
+            get_system_uptime,
+            {"boot_time": "", "uptime_seconds": 0},
+            "uptime",
+        )
         uptime_seconds = int(uptime_raw.get("uptime_seconds", 0))
         days, remaining_after_days = divmod(uptime_seconds, _SECONDS_PER_DAY)
         hours, remaining_after_hours = divmod(remaining_after_days, _SECONDS_PER_HOUR)
         minutes, seconds = divmod(remaining_after_hours, 60)
 
-        os_info = get_os_info().copy()
-        hardware_info = get_hardware_info().copy()
+        os_info = self._run_with_timeout(get_os_info, {}, "os")
+        hardware_info = self._run_with_timeout(get_hardware_info, {}, "hardware")
         disk_io = disk.get("io", {}).copy()
         disk_io.setdefault("read_time", 0)
         disk_io.setdefault("write_time", 0)
@@ -74,13 +156,17 @@ class SystemScannerService:
         }
 
         return {
-            "cpu": self.cpu(),
+            "cpu": cpu,
             "memory": memory,
             "disk": disk,
-            "network": self.network(),
+            "network": network,
             "uptime": uptime,
-            "processes": self.processes()["top_processes"],
-            "gpu": get_gpu_metrics(),
+            "processes": top_processes_list,
+            "gpu": self._run_with_timeout(
+                get_gpu_metrics,
+                {"available": False, "message": "GPU metrics timed out"},
+                "gpu",
+            ),
             "os": os_info,
             "hardware": hardware_info,
         }

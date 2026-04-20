@@ -39,21 +39,36 @@ st.sidebar.caption(f"Refresh interval: {settings.refresh_interval_seconds}s")
 
 
 def fetch_metrics(url: str) -> Dict[str, Any]:
-    response = requests.get(f"{url}/metrics", timeout=settings.request_timeout_seconds)
+    normalized_url = url.rstrip("/")
+    response = requests.get(
+        f"{normalized_url}/metrics",
+        timeout=settings.request_timeout_seconds,
+    )
     response.raise_for_status()
     return response.json()
 
 
 try:
     metrics = fetch_metrics(api_base_url)
+    st.session_state["last_metrics"] = metrics
 except requests.Timeout:
     logger.exception("Timed out while loading metrics from API")
-    st.error("Connection to API timed out. Check API availability and network latency.")
-    st.stop()
-except Exception as exc:
+    cached_metrics = st.session_state.get("last_metrics")
+    if cached_metrics:
+        st.warning("API request timed out. Displaying the last successful snapshot.")
+        metrics = cached_metrics
+    else:
+        st.error("Connection to API timed out. Check API availability and network latency.")
+        st.stop()
+except requests.RequestException as exc:
     logger.exception("Failed to load metrics from API")
-    st.error(f"Unable to load metrics from API: {exc}")
-    st.stop()
+    cached_metrics = st.session_state.get("last_metrics")
+    if cached_metrics:
+        st.warning("API request failed. Displaying the last successful snapshot.")
+        metrics = cached_metrics
+    else:
+        st.error(f"Unable to load metrics from API: {exc}")
+        st.stop()
 
 history: Dict[str, Deque[float]] = st.session_state.setdefault(
     "history",
