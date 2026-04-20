@@ -116,11 +116,12 @@ class SystemScannerService:
             },
             "network",
         )
-        processes = self._run_with_timeout(
-            lambda: get_top_processes(limit=self.settings.top_process_count),
-            [],
+        processes_data = self._run_with_timeout(
+            self.processes,
+            {"top_processes": []},
             "processes",
         )
+        top_processes_list = processes_data.get("top_processes", [])
         uptime_raw = self._run_with_timeout(
             get_system_uptime,
             {"boot_time": "", "uptime_seconds": 0},
@@ -159,7 +160,7 @@ class SystemScannerService:
             "disk": disk,
             "network": network,
             "uptime": uptime,
-            "processes": processes,
+            "processes": top_processes_list,
             "gpu": self._run_with_timeout(
                 get_gpu_metrics,
                 {"available": False, "message": "GPU metrics timed out"},
