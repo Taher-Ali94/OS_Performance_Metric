@@ -3,16 +3,42 @@
 from __future__ import annotations
 
 import logging
+import sys
 from collections import deque
+from pathlib import Path
 from typing import Any, Deque, Dict
 
-import pandas as pd
-import requests
-import streamlit as st
-from streamlit_autorefresh import st_autorefresh
 
-from scanner.config import get_settings
-from scanner.logger import configure_logging
+def _bootstrap_path() -> None:
+    """Ensure the project root is on sys.path so scanner package is importable.
+
+    Streamlit adds the current working directory to sys.path, which works when
+    launching from the project root but fails when run from any other directory
+    (e.g. ``cd ui && streamlit run dashboard.py`` or from an IDE).  Walking up
+    from this file's location guarantees the correct root is found regardless of
+    the working directory.
+    """
+    script_path = Path(__file__).resolve()
+    for directory in script_path.parents:
+        if (directory / "scanner").is_dir():
+            root = str(directory)
+            if root not in sys.path:
+                sys.path.insert(0, root)
+            return
+    raise RuntimeError(
+        f"Could not locate project root containing 'scanner' directory from {script_path}."
+    )
+
+
+_bootstrap_path()
+
+import pandas as pd  # noqa: E402
+import requests  # noqa: E402
+import streamlit as st  # noqa: E402
+from streamlit_autorefresh import st_autorefresh  # noqa: E402
+
+from scanner.config import get_settings  # noqa: E402
+from scanner.logger import configure_logging  # noqa: E402
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -126,11 +152,11 @@ st.bar_chart(per_core_df)
 
 st.subheader("Top Processes")
 process_df = pd.DataFrame(metrics["processes"])
-st.dataframe(process_df, use_container_width=True)
+st.dataframe(process_df, width="stretch")
 
 st.subheader("Disk Partitions")
 partitions_df = pd.DataFrame(metrics["disk"]["partitions"])
-st.dataframe(partitions_df, use_container_width=True)
+st.dataframe(partitions_df, width="stretch")
 
 st.subheader("System Information")
 info_col1, info_col2 = st.columns(2)
