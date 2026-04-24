@@ -29,6 +29,9 @@ class NetworkSampler:
     def sample(self) -> Dict[str, float]:
         with self._lock:
             counters = psutil.net_io_counters()
+            if counters is None:
+                return {"bytes_sent_per_sec": 0.0, "bytes_recv_per_sec": 0.0}
+
             now = time.time()
 
             sent_rate = 0.0
@@ -126,6 +129,18 @@ def get_network_metrics() -> Dict[str, Any]:
     """Return network counters and estimated transfer speed."""
 
     counters = psutil.net_io_counters()
+    if counters is None:
+        return {
+            "bytes_sent": 0,
+            "bytes_recv": 0,
+            "packets_sent": 0,
+            "packets_recv": 0,
+            "errors_in": 0,
+            "errors_out": 0,
+            "bytes_sent_per_sec": 0.0,
+            "bytes_recv_per_sec": 0.0,
+        }
+
     speed = _NETWORK_SAMPLER.sample()
 
     return {
